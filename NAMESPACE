@@ -1,0 +1,3 @@
+export("calculateMaxEntropy","calculateThreshold","analyseParticles","computeIlluminationCorrection","processFISH")
+import(EBImage)
+import(abind)

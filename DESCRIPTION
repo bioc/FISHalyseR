@@ -1,0 +1,19 @@
+Package: FISHalyseR
+Type: Package
+Title: FISHalyseR a package for automated FISH quantification
+Version: 0.99.0
+Date: 2015-04-01
+Author: Karesh Arunakirinathan <akaresh88@gmail.com>, Andreas Heindl
+        <andreas.heindl@icr.ac.uk>
+Maintainer: Karesh Arunakirinathan <akaresh88@gmail.com>, Andreas
+        Heindl <andreas.heindl@icr.ac.uk>
+Description: FISHalyseR provides functionality to process and analyse
+        digital cell culture images, in particular to quantify FISH
+        probes within nuclei. Furthermore, it extract the spatial
+        location of each nucleus as well as each probe enabling spatial
+        co-localisation analysis.
+VignetteBuilder: knitr
+License: Artistic-2.0
+Depends: EBImage,abind
+Suggests: knitr
+biocViews: CellBiology

@@ -1,0 +1,270 @@
+\documentclass[10pt]{article}
+\topmargin 0.0cm
+\oddsidemargin 0.5cm
+\evensidemargin 0.5cm
+\textwidth 16cm 
+\textheight 21cm
+
+%\VignetteIndexEntry{FISHAlyseR Automated fluorescence in situ hybridisation quantification in R}
+%\VignetteEngine{knitr::knitr}
+
+\usepackage[labelfont=bf,labelsep=period,justification=raggedright]{caption}
+
+\newcommand{\Rfunction}[1]{{\mbox{\normalfont\texttt{#1}}}}
+
+\begin{document}
+
+<<SetParameters,include=FALSE,eval=TRUE>>=
+library(knitr)
+opts_chunk$set(
+concordance=TRUE
+)
+TempDir<-dirname(system.file( "extdata", "SampleFISHgray.jpg", package="FISHalyseR"))
+@
+
+
+
+\begin{flushleft}
+\begin{center}
+{\LARGE \bf FISHalyseR \\  Automated fluorescence in situ hybridisation quantification in R\\}
+
+\bigskip
+Andreas Heindl, Karesh Arunakirinathan\\
+\bigskip
+E-mail: andreas.heindl@icr.ac.uk, akaresh88@gmail.com 
+\end{center}
+\end{flushleft}
+
+\tableofcontents
+
+\section{Load the package}
+To load the package use the following command:
+<<LoadPackage>>=
+library(FISHalyseR)
+@
+FISHalyseR utilises the functions of the R package EBImage to read, write and manipulate images.
+
+\section{Available image thresholding methods} 
+
+\subsection{Max Entropy Threshold}
+The Maximum Entropy algorithm is a thresholding technique similar to Otsu. It allows for binarising an image by maximising the inter-class entropy. The method enables reliable probe detection. It requires only a single input parameter which is the grayscale image. Figure \ref{fig1} illustrates the Max Entropy Thresholding of an image containing FISH probes and nuclei. 
+
+<<ComputeProbeMask,results='hide'>>=
+f = system.file( "extdata", "SampleFISHgray.jpg", package="FISHalyseR")
+img = readImage(f)
+
+t = calculateMaxEntropy(img)
+img[img<t] <- 0
+img[img>=t] <- 1
+
+@
+
+<<echo=FALSE, results='hide'>>=
+TargetFileName<-paste(TempDir,'exImgMaxEntropyProbes1.jpg',sep='/')
+writeImage(img, TargetFileName)
+@
+
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{\Sexpr{f}}
+\includegraphics[width=0.5\textwidth]{\Sexpr{TargetFileName}}
+\caption{The left figure shows the original grayscale input image containing the nuclei and the FISH probes. Applying maximum entropy thresholding results in the binary image on the right side. The location of the FISH probes is indicated by white pixels.}
+\label{fig1}
+\end{figure}
+
+\subsection{Otsu threshold}
+Otsu's method (Figure \ref{fig2}) is a well studied thresholding techniques that calculates the optimal threshold separating two classes such that their intra-class variance is minimal. The method requires similar to the maximum entropy thresholding only a grayscale image as input parameter.
+
+<<ComputeCellMask,results='hide'>>=
+f = system.file( "extdata", "SampleFISHgray.jpg", package="FISHalyseR")
+img = readImage(f)
+
+t = calculateThreshold(img)
+img[img<t] <- 0
+img[img>=t] <- 1
+
+@
+
+<<echo=FALSE, results='hide'>>=
+TargetFileName<-paste(TempDir,'exImgOtsuCellMask.jpg',sep='/')
+writeImage(img, TargetFileName)
+@
+
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{\Sexpr{f}}
+\includegraphics[width=0.5\textwidth]{\Sexpr{TargetFileName}}
+\caption{The image on the left side shows the original input image image containing nuclei. After thresholding it using Otsu's method a binary image is created indicating the location of each nucleus in white. Note that clutter and artefacts will we removed using the analyseParticles function during processing.}
+\label{fig2}
+\end{figure}
+
+\section{Analyse Particles}
+\Rfunction{analyseParticles} is used to clean up clutter and artefacts from binary images. The user can specify minimal and maximal area allowed for each connected component (e.g. nucleus, probe, etc.....). The example beneath illustrates how to remove components with an area smaller than 5 pixels and an area larger than 20 pixels. Figure \ref{fig3} depicts the process with an example image containing FISH probes.
+<<RemoveSmallParticlesProbeMask,results='hide'>>=
+fProbes1 = paste(TempDir,'/',"exImgMaxEntropyProbes1.jpg",sep='')
+img = readImage(fProbes1)
+
+anaImg <- analyseParticles(img, 20, 5,0)
+@
+
+<<echo=FALSE, results='hide'>>=
+TargetFileName<-paste(TempDir,'exImgProbes1Clean.jpg',sep='/')
+writeImage(anaImg, TargetFileName)
+@
+The function is also used to clean up the cell mask image. The example beneath shows a call of analyseParticles that removes all connected component with an area smaller than 1000 pixel and greater than 20000 pixels. The process is illustrated in Figure \ref{fig4} using our cell mask from Figure \ref{fig2}.
+<<RemoveSmallParticlesCellMask,results='hide'>>=
+f = paste(TempDir,'/',"exImgOtsuCellMask.jpg", sep='')
+img = readImage(f)
+
+anaImg <- analyseParticles(img, 20000, 1000,0)
+@
+
+<<echo=FALSE, results='hide'>>=
+TargetFileName2<-paste(TempDir,'exImgCellMaskClean.jpg',sep='/')
+writeImage(anaImg, TargetFileName2)
+@
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{\Sexpr{fProbes1}}
+\includegraphics[width=0.5\textwidth]{\Sexpr{TargetFileName}}
+\caption{The original input image is given on the left side. Applying analyseParticles with MinSize=5 and MaxSize=20 results in the image shown on the right side. Components smaller than 5 pixels and larger than 20 pixels have been removed.}
+\label{fig3}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{\Sexpr{f}}
+\includegraphics[width=0.5\textwidth]{\Sexpr{TargetFileName2}}
+\caption{This figure illustrates the application of analyseParticles on the nuclei mask. The input image is shown on the left side. Components (nuclei, artefacts) with an area greater than 20000 pixel and smaller than 1000 pixels have been removed.}
+\label{fig4}
+\end{figure}
+
+
+\subsection{Background correction methods}
+FISHalyseR supports three different methods to correct for uneven illumination.
+\begin{enumerate}
+  \item Gaussian blurring
+  \item User-specified illumination image
+  \item Multidimensional Illumination Correction using an image stack
+\end{enumerate}
+To apply (multiple) Gaussian blurring, option 1 has to be chosen. The second parameter specifies the sigma. 
+<<ExampleGaussianBlurring,results='hide'>>=
+bgCorrMethod = list(1,100)
+@
+In case the user has an illumination gradient image it can be passed to FISHalyseR using option 2. 
+<<ExampleSepcifiedIlluminationImage,results='hide'>>=
+# path to illumination image
+illumPath = "../IllCorr.jpg"
+bgCorrMethod = list(2,illumPath)
+@
+
+If multiple images from the same acquisition or the same microscopic setup are available then option 3 should be chosen. A novel multidimensional illumination correction method using a stack of images is then applied to derive the illumination gradient. Now the last parameter specifies the amount of images chosen to estimate the gradient. The more images are chosen the better the resulting illumination correction image will be. In the example beneath six images are chosen located in the given path. 
+<<ExampleMultidimensionalIlluminationCorrection,results='hide'>>=
+bgCorrMethod = list(3,"/path/to/stack","*.jpg",6)
+@
+
+The variable of type list specifying the illumination correction method is later passed to \Rfunction{processFISH}.
+
+\subsection{Choosing probe channels}
+FISHalyseR currently supports two different ways to read probe channels. In case each probe has been acquired in a separate channel, simply pass each single file to FISHalyseR in a list variable. For visualisation purpose each channel has to be assigned a colour. This is achieved by creating a list variable containing the colour vectors for each channel. 
+
+
+
+<<SelectProbeChannels,results='hide'>>=
+red_Og   <- system.file( "extdata", "SampleFISH_R.jpg", package="FISHalyseR")
+green_Gn <- system.file( "extdata", "SampleFISH_G.jpg", package="FISHalyseR")
+#Create colour vector list
+channelColours = list(R=c(255,0,0),G=c(0,255,0))
+channelSignals = list(red_Og,green_Gn)
+@
+In case the user has only a composite image, thus all probe channels have been fused to a RGB image, then FISHalyseR separates the RGB image into single channels Red, Green, Blue. This input format will only work with a maximum of three probes because mixtures of red, green and blue can not be separated by simple colour channel splitting.
+<<UseRGBImageAsProbeSource>>=
+combinedImage <- system.file( "extdata", "SampleFISH.jpg", package="FISHalyseR")
+channelSignals = list(combinedImage)
+@
+
+The variable of type list specifying where FISHalyseR can find the probe channels is later passed to \Rfunction{processFISH}. 
+
+\section{Quantifying FISH probes in cell culture images}
+
+A single function \Rfunction{processFISH} has to be called to process a cell culture image with FISH probes. Note that the amount of probe channels is not limited assuming that sufficient main memory.  Results are written to a CSV file. An image (Figure \ref{fig7}) is created illustrating the location of each nucleus (shown in cyan) as well as each detected probe (red, green in our example). Note that the list input parameters \textbf{bgCorrMethod} and \textbf{channelSignals} are described in detail in the previous paragraphs. 
+
+\begin{enumerate}
+ \item combinedImg - composite image,  RGB images composed of all available stains
+ \item writedir - Output directory
+ \item bgCorrMethod - list with two arguments. Currently four options are available: 
+ \begin{enumerate}
+
+                 \item - None 
+                 \item - gaussian blur \\
+                         e.g. bgCorrMethod=list(1, 100)
+                 \item - User-provided illumination correction image \\
+                         e.g. bgCorrMethod=list(2,"/exIllCorr.jpg")
+                 \item - illumination correction if multiple images from the same acquisition are   available \\
+                         e.g. bgCorrMethod=list(3,"/path/to/stack","*.jpg",6)
+ \end{enumerate}
+
+ \item channelSignals - list of paths to image containing the probes
+ \item channelColours - colour vector for each channel (list type) \\
+                    e.g. channelColours=list(R=c(255,0,0),G=c(0,255,0),B=c(0,0,255))
+ \item sizeNucleus - c(5,100)  - Analyse only nuclei within that range (in pixels)
+ \item sizeProbe - c(5,100) - Analyse only probes within that range (in pixels)
+ \item maxprobes - Maximum limit for probes per nuclei. Nuclei with more probes will be ignored
+ \item outputImageFormat - specify output format e.g. jpg or png
+\end{enumerate}
+
+The example beneath demonstrate the usage of FISHalyseR. Only the \Rfunction{processFISH} functions has to be called. After specifying the signal channels, colour vectors, area constrains and maximum amount of probes to analyse, an output image is created per nucleus as well as a CSV file summarising all measurements. 
+
+<<RunProcessFISH,results='hide'>>=
+illuCorrection = system.file( "extdata", "SampleFISHillu.jpg", package="FISHalyseR")
+
+combinedImage <- system.file( "extdata", "SampleFISH.jpg", package="FISHalyseR")
+red_Og   <- system.file( "extdata", "SampleFISH_R.jpg", package="FISHalyseR")
+green_Gn <- system.file( "extdata", "SampleFISH_G.jpg", package="FISHalyseR")
+
+# directory where all the files will be saved
+writedir = paste(TempDir,sep='')
+
+bgCorrMethod = list(0,'')
+
+channelColours = list(R=c(255,0,0),G=c(0,255,0))
+channelSignals = list(red_Og,green_Gn)
+sizecell = c(1000,20000)
+sizeprobe= c(5,20)
+
+
+processFISH(combinedImage,writedir,bgCorrMethod,channelSignals,
+            channelColours,sizecell,sizeprobe)
+@
+
+<<results='hide',echo=FALSE>>=
+OverlayFile<-paste(TempDir,'SampleFISH.jpg/SampleFISH',sep='')
+TargetFileName<-paste(TempDir,'SampleFISH.jpg',sep='/')
+
+@
+
+Results are stored in a CSV file named after the input file. An example of an output with only one probe channel (red) is given beneath. In case of multiple channels the amount of columns will vary because then also distances between each different probe channel will be listed.\\ 
+
+\begin{tabular}{ l | l }
+  filename & Name of the input file\\
+  cell id &  Unique number per nucleus\\
+  eccentricity &Eccentricity (shape feature)\\
+  number of R probes &  Amount of red probes for a specific nucleus\\
+  R1 R2 & Distance in pixels between red probe 1 and red probe 2\\
+  R1 R3 & Distance in pixels between red probe 1 and red probe 3\\ 
+  R2 R3 & Distance in pixels between red probe 2 and red probe 3\\
+  X center of mass & X coordinate of the center of mass of the nucleus\\
+  Y center of mass & Y coordinate of the center of mass of the nucleus\\
+  area of nucleus & Area in pixels of the nucleus\\
+  perimeter of cell & Perimeter of nucleus\\
+  radius of cell & Radius of nucleus\\
+  AR1 & Area in pixels of red probe 1\\
+  AR2 & Area in pixels of red probe 2\\
+  AR3 & Area in pixels of red probe 3\\
+\end{tabular}
+
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{\Sexpr{TargetFileName}}
+\includegraphics[width=0.5\textwidth,ext=.jpg_Overlay.png,type=png,read=*]{\Sexpr{OverlayFile}}
+\caption{This figure shows the acquired composite image of a FISH culture next to resulting image of FISHalyseR. The outlines of each detected nuclei is depicted in cyan. Probes are drawn in their respective colour (red, green)}
+\label{fig7}
+\end{figure}
+
+
+\end{document}

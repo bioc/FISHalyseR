@@ -1,0 +1,9 @@
+CHANGES IN VERSION 0.99
+-----------------------
+
+ o Multi probe support
+
+ o Improved speed
+
+ o Parameters are now stored in arguments.txt file 
+ 
