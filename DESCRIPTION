@@ -1,7 +1,7 @@
 Package: FISHalyseR
 Type: Package
 Title: FISHalyseR a package for automated FISH quantification
-Version: 1.34.0
+Version: 1.35.0
 Date: 2015-04-08
 Author: Karesh Arunakirinathan <akaresh88@gmail.com>, Andreas Heindl
         <andreas.heindl@icr.ac.uk>
